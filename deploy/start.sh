@@ -6,6 +6,8 @@ WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-/data/workspace}"
 CONFIG_PATH="$STATE_DIR/openclaw.json"
 TEMPLATE_PATH="/app/deploy/openclaw.json.tmpl"
 WORKSPACE_SEED="/app/deploy/workspace"
+MEMORY_REPO_DIR="${MEMORY_REPO_DIR:-/data/memory}"
+export MEMORY_REPO_DIR
 
 mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
 
@@ -33,8 +35,6 @@ substitute() {
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "Seeding config at $CONFIG_PATH from template"
   substitute "$TEMPLATE_PATH" > "$CONFIG_PATH"
-else
-  echo "Config already exists at $CONFIG_PATH (preserving on-disk version)"
 fi
 
 for f in USER.md AGENTS.md MEMORY.md; do
@@ -44,4 +44,61 @@ for f in USER.md AGENTS.md MEMORY.md; do
   fi
 done
 
-exec node openclaw.mjs gateway --bind lan
+# --- Memory sync setup (optional) ---
+SYNC_PID=""
+if [ -n "${MEMORY_GIT_REPO:-}" ] && [ -n "${MEMORY_GIT_PAT:-}" ]; then
+  AUTH_REPO="https://x-access-token:${MEMORY_GIT_PAT}@${MEMORY_GIT_REPO#https://}"
+
+  if [ ! -d "$MEMORY_REPO_DIR/.git" ]; then
+    echo "Cloning memory repo"
+    git clone --quiet "$AUTH_REPO" "$MEMORY_REPO_DIR"
+  else
+    echo "Memory repo already cloned; pulling latest"
+    git -C "$MEMORY_REPO_DIR" pull --quiet --rebase --autostash || \
+      echo "memory-sync: pull failed, continuing with local copy" >&2
+  fi
+
+  git -C "$MEMORY_REPO_DIR" config user.email "openclaw@render.local"
+  git -C "$MEMORY_REPO_DIR" config user.name  "OpenClaw Bot"
+
+  if [ ! -f "$MEMORY_REPO_DIR/MEMORY.md" ]; then
+    cp "$WORKSPACE_SEED/MEMORY.md" "$MEMORY_REPO_DIR/MEMORY.md"
+  fi
+
+  rm -f "$WORKSPACE_DIR/MEMORY.md"
+  ln -s "$MEMORY_REPO_DIR/MEMORY.md" "$WORKSPACE_DIR/MEMORY.md"
+
+  /app/deploy/memory-sync.sh &
+  SYNC_PID=$!
+  echo "memory-sync started (pid $SYNC_PID, interval ${MEMORY_SYNC_INTERVAL_SECONDS:-300}s)"
+else
+  echo "MEMORY_GIT_REPO / MEMORY_GIT_PAT unset; memory will be ephemeral"
+fi
+
+# --- Gateway with graceful shutdown ---
+node openclaw.mjs gateway --bind lan &
+GATEWAY_PID=$!
+
+cleanup() {
+  trap - TERM INT EXIT
+  echo "Shutdown received; flushing memory and stopping gateway"
+  if [ -n "$SYNC_PID" ] && kill -0 "$SYNC_PID" 2>/dev/null; then
+    kill -TERM "$SYNC_PID" 2>/dev/null || true
+  fi
+  if [ -d "$MEMORY_REPO_DIR/.git" ]; then
+    cd "$MEMORY_REPO_DIR"
+    if ! git diff --quiet -- MEMORY.md 2>/dev/null; then
+      git add MEMORY.md
+      git commit -m "memory: shutdown sync $(date -u +%FT%TZ)" --quiet 2>/dev/null || true
+      git push --quiet 2>/dev/null || echo "shutdown push failed" >&2
+    fi
+  fi
+  if kill -0 "$GATEWAY_PID" 2>/dev/null; then
+    kill -TERM "$GATEWAY_PID" 2>/dev/null || true
+    wait "$GATEWAY_PID" 2>/dev/null || true
+  fi
+  exit 0
+}
+trap cleanup TERM INT
+
+wait "$GATEWAY_PID"

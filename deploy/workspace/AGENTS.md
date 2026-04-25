@@ -48,4 +48,4 @@ Confirm the channel name before creating if there's any ambiguity.
 
 - Read `MEMORY.md` on demand via `memory_search` / `memory_get` when long-term context matters.
 - Write to `MEMORY.md` only for facts that should persist across sessions: user preferences, project decisions, active goals. Not transient state.
-- **Note:** This deployment runs on Render's free tier without a persistent disk, so `MEMORY.md` resets on every cold start (~15 min idle). Treat it as a session-bounded scratchpad, not durable storage.
+- `MEMORY.md` is symlinked to a private GitHub repo (`singhaniatanay/openclaw-memory`) and auto-pushed every ~5 minutes when changed, plus on graceful shutdown. Edits survive cold starts and redeploys.

@@ -35,3 +35,11 @@ services:
         value: "1497695325866037379"
       - key: DIGEST_CHANNEL_ID
         value: "1497695345927389204"
+
+      # --- Memory persistence via private GitHub repo (free-tier workaround) ---
+      - key: MEMORY_GIT_REPO
+        value: https://github.com/singhaniatanay/openclaw-memory.git
+      - key: MEMORY_GIT_PAT
+        sync: false   # fine-grained PAT scoped to openclaw-memory only
+      - key: MEMORY_SYNC_INTERVAL_SECONDS
+        value: "300"
