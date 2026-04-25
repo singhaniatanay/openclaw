@@ -2,9 +2,11 @@ services:
   - type: web
     name: openclaw
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /health
+    dockerCommand: /app/deploy/start.sh
     envVars:
+      # --- Gateway ---
       - key: OPENCLAW_GATEWAY_PORT
         value: "8080"
       - key: OPENCLAW_STATE_DIR
@@ -13,7 +15,23 @@ services:
         value: /data/workspace
       - key: OPENCLAW_GATEWAY_TOKEN
         generateValue: true
-    disk:
-      name: openclaw-data
-      mountPath: /data
-      sizeGB: 1
+
+      # --- Model provider (NVIDIA NIM, OpenAI-compatible) ---
+      - key: NVIDIA_API_KEY
+        sync: false   # set in Render dashboard
+
+      # --- Discord channel ---
+      - key: DISCORD_BOT_TOKEN
+        sync: false   # set in Render dashboard
+      - key: DISCORD_SERVER_ID
+        value: "1467439984096313354"
+      - key: DISCORD_USER_ID_1
+        value: "905160890997940245"
+      - key: DISCORD_USER_ID_2
+        value: "522465064322727956"
+
+      # --- Cross-channel summary delivery targets (substituted into AGENTS.md at boot) ---
+      - key: MAIN_CHANNEL_ID
+        value: "1497695325866037379"
+      - key: DIGEST_CHANNEL_ID
+        value: "1497695345927389204"

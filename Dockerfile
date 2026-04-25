@@ -258,6 +258,10 @@ RUN --mount=type=cache,id=openclaw-bookworm-apt-cache,target=/var/cache/apt,shar
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw \
  && chmod 755 /app/openclaw.mjs
 
+# Render bootstrap: config template + workspace seed + start wrapper
+COPY --chown=node:node deploy /app/deploy
+RUN chmod +x /app/deploy/start.sh
+
 ENV NODE_ENV=production
 
 # Security hardening: Run as non-root user
