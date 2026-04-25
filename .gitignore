@@ -91,6 +91,7 @@ docs/internal/
 tmp/
 IDENTITY.md
 USER.md
+!deploy/workspace/USER.md
 .tgz
 .idea
 
