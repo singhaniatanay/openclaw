@@ -79,7 +79,7 @@ fi
 # Render injects $PORT and expects us to listen on it. Use it if set,
 # otherwise fall back to OpenClaw's default (18789).
 export OPENCLAW_GATEWAY_PORT="${PORT:-${OPENCLAW_GATEWAY_PORT:-18789}}"
-node openclaw.mjs gateway --bind lan &
+node openclaw.mjs gateway --bind lan --allow-unconfigured &
 GATEWAY_PID=$!
 
 cleanup() {
