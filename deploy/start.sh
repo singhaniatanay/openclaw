@@ -75,10 +75,20 @@ else
   echo "MEMORY_GIT_REPO / MEMORY_GIT_PAT unset; memory will be ephemeral"
 fi
 
+# --- Health listener on Render's $PORT (binds immediately) ---
+# Render's deploy times out if nothing listens on $PORT within ~5 minutes.
+# The gateway takes ~4.5 min to boot, which races the timeout. Bind a
+# tiny placeholder server right away so Render's port scan and health
+# checks always succeed.
+node /app/deploy/health-listener.mjs &
+HEALTH_PID=$!
+echo "health-listener started (pid $HEALTH_PID, port ${PORT:-10000})"
+
 # --- Gateway with graceful shutdown ---
-# Render injects $PORT and expects us to listen on it. Use it if set,
-# otherwise fall back to OpenClaw's default (18789).
-export OPENCLAW_GATEWAY_PORT="${PORT:-${OPENCLAW_GATEWAY_PORT:-18789}}"
+# Gateway runs on an internal loopback port — we don't expose it because
+# Discord uses outbound websockets. Pin to 18789 to avoid conflicting
+# with the health listener on $PORT.
+export OPENCLAW_GATEWAY_PORT=18789
 node openclaw.mjs gateway --bind lan --allow-unconfigured &
 GATEWAY_PID=$!
 
@@ -95,6 +105,9 @@ cleanup() {
       git commit -m "memory: shutdown sync $(date -u +%FT%TZ)" --quiet 2>/dev/null || true
       git push --quiet 2>/dev/null || echo "shutdown push failed" >&2
     fi
+  fi
+  if [ -n "${HEALTH_PID:-}" ] && kill -0 "$HEALTH_PID" 2>/dev/null; then
+    kill -TERM "$HEALTH_PID" 2>/dev/null || true
   fi
   if kill -0 "$GATEWAY_PID" 2>/dev/null; then
     kill -TERM "$GATEWAY_PID" 2>/dev/null || true
