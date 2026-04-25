@@ -7,8 +7,8 @@ services:
     dockerCommand: /app/deploy/start.sh
     envVars:
       # --- Gateway ---
-      - key: OPENCLAW_GATEWAY_PORT
-        value: "8080"
+      # OPENCLAW_GATEWAY_PORT intentionally unset — start.sh derives it
+      # from Render's $PORT injection at runtime.
       - key: OPENCLAW_STATE_DIR
         value: /home/node/state/.openclaw
       - key: OPENCLAW_WORKSPACE_DIR

@@ -76,6 +76,9 @@ else
 fi
 
 # --- Gateway with graceful shutdown ---
+# Render injects $PORT and expects us to listen on it. Use it if set,
+# otherwise fall back to OpenClaw's default (18789).
+export OPENCLAW_GATEWAY_PORT="${PORT:-${OPENCLAW_GATEWAY_PORT:-18789}}"
 node openclaw.mjs gateway --bind lan &
 GATEWAY_PID=$!
 
