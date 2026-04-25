@@ -10,9 +10,11 @@ services:
       - key: OPENCLAW_GATEWAY_PORT
         value: "8080"
       - key: OPENCLAW_STATE_DIR
-        value: /data/.openclaw
+        value: /home/node/state/.openclaw
       - key: OPENCLAW_WORKSPACE_DIR
-        value: /data/workspace
+        value: /home/node/state/workspace
+      - key: MEMORY_REPO_DIR
+        value: /home/node/state/memory
       - key: OPENCLAW_GATEWAY_TOKEN
         generateValue: true
 
