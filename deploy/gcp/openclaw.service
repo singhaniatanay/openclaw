@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/openclaw
+ExecStartPre=/opt/openclaw/deploy/gcp/fetch-secrets.sh
+ExecStart=/opt/openclaw/deploy/gcp/start.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

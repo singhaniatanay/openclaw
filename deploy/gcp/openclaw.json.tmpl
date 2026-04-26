@@ -1,0 +1,54 @@
+{
+  "gateway": {
+    "mode": "local",
+    "controlUi": {
+      "enabled": true,
+      "allowedOrigins": ["https://openclaw.alwynventures.com"]
+    }
+  },
+  "plugins": {
+    "deny": ["bonjour", "device-pair", "phone-control"]
+  },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "token": {
+        "source": "env",
+        "provider": "default",
+        "id": "DISCORD_BOT_TOKEN"
+      },
+      "groupPolicy": "allowlist",
+      "guilds": {
+        "${DISCORD_SERVER_ID}": {
+          "requireMention": false,
+          "users": ["${DISCORD_USER_ID_1}", "${DISCORD_USER_ID_2}"]
+        }
+      },
+      "dmPolicy": "allowlist",
+      "allowFrom": ["${DISCORD_USER_ID_1}", "${DISCORD_USER_ID_2}"],
+      "commands": { "native": true }
+    }
+  },
+  "models": {
+    "providers": {
+      "nvidia": {
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "api": "openai-completions",
+        "models": [
+          { "id": "deepseek-ai/deepseek-v4-pro", "name": "DeepSeek V4 Pro", "contextTokens": 1000000 }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "nvidia/deepseek-ai/deepseek-v4-pro",
+        "fallbacks": ["nvidia/nemotron-3-super-120b-a12b"]
+      }
+    }
+  },
+  "session": {
+    "threadBindings": { "enabled": true, "idleHours": 24 }
+  }
+}

@@ -1,0 +1,30 @@
+# Caddy reverse proxy with auto Let's Encrypt + Basic Auth.
+# Variables ({$VAR}) come from /etc/caddy/.env loaded by the systemd unit override.
+{
+  email admin@alwynventures.com
+}
+
+openclaw.alwynventures.com {
+  encode gzip
+
+  # First-layer gate: HTTP Basic Auth before anything reaches the gateway.
+  basic_auth {
+    {$CADDY_BASIC_USER} {$CADDY_BASIC_HASH}
+  }
+
+  # WebSocket-aware reverse proxy to the OpenClaw gateway on loopback.
+  reverse_proxy 127.0.0.1:18789 {
+    # Preserve original Host so gateway sees the public hostname for Origin checks.
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+
+    # Long timeouts for long-lived agent turns + WS connections.
+    transport http {
+      read_timeout 30m
+      write_timeout 30m
+      dial_timeout 10s
+    }
+  }
+}
