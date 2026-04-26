@@ -1,0 +1,34 @@
+name: keepalive
+
+# Pings the Render free-tier deploy every 10 min so it doesn't sleep
+# (Render spins down web services after 15 min of no inbound HTTP traffic).
+# 10-min interval gives margin against GitHub Actions' cron delays.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        run: |
+          set -u
+          URL="https://openclaw-c9nt.onrender.com/health"
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/body -w "%{http_code}" --max-time 60 "$URL" || echo "000")
+            echo "attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              cat /tmp/body
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "all 3 attempts failed"
+          exit 1
