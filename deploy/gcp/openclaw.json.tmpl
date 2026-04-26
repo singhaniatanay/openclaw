@@ -3,7 +3,8 @@
     "mode": "local",
     "controlUi": {
       "enabled": true,
-      "allowedOrigins": ["https://openclaw.alwynventures.com"]
+      "allowedOrigins": ["https://openclaw.alwynventures.com"],
+      "dangerouslyDisableDeviceAuth": true
     }
   },
   "plugins": {
@@ -35,7 +36,9 @@
         "baseUrl": "https://integrate.api.nvidia.com/v1",
         "api": "openai-completions",
         "models": [
-          { "id": "deepseek-ai/deepseek-v4-pro", "name": "DeepSeek V4 Pro", "contextTokens": 1000000 }
+          { "id": "meta/llama-3.3-70b-instruct", "name": "Llama 3.3 70B Instruct", "contextTokens": 131072 },
+          { "id": "nvidia/llama-3.3-nemotron-super-49b-v1.5", "name": "Nemotron Super 49B v1.5", "contextTokens": 131072 },
+          { "id": "deepseek-ai/deepseek-v3.1-terminus", "name": "DeepSeek V3.1 Terminus", "contextTokens": 131072 }
         ]
       }
     }
@@ -43,8 +46,8 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "nvidia/deepseek-ai/deepseek-v4-pro",
-        "fallbacks": ["nvidia/nemotron-3-super-120b-a12b"]
+        "primary": "nvidia/meta/llama-3.3-70b-instruct",
+        "fallbacks": ["nvidia/nvidia/llama-3.3-nemotron-super-49b-v1.5", "nvidia/deepseek-ai/deepseek-v3.1-terminus"]
       }
     }
   },
