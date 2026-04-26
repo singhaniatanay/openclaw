@@ -75,20 +75,19 @@ else
   echo "MEMORY_GIT_REPO / MEMORY_GIT_PAT unset; memory will be ephemeral"
 fi
 
-# --- Health listener on Render's $PORT (binds immediately) ---
+# --- Reverse proxy on Render's $PORT (binds immediately) ---
 # Render's deploy times out if nothing listens on $PORT within ~5 minutes.
-# The gateway takes ~4.5 min to boot, which races the timeout. Bind a
-# tiny placeholder server right away so Render's port scan and health
-# checks always succeed.
-node /app/deploy/health-listener.mjs &
+# The gateway takes ~4.5 min to boot, which races the timeout. The proxy:
+#   - answers /health instantly (Render port scan + health checks)
+#   - forwards everything else (HTTP + WS upgrades) to the gateway on 18789
+# This lets the Control UI be reachable at the public Render URL once the
+# gateway is up, while keeping the fast-path health check.
+export OPENCLAW_GATEWAY_PORT=18789
+node /app/deploy/proxy.mjs &
 HEALTH_PID=$!
-echo "health-listener started (pid $HEALTH_PID, port ${PORT:-10000})"
+echo "proxy started (pid $HEALTH_PID, public ${PORT:-10000} -> gateway ${OPENCLAW_GATEWAY_PORT})"
 
 # --- Gateway with graceful shutdown ---
-# Gateway runs on an internal loopback port — we don't expose it because
-# Discord uses outbound websockets. Pin to 18789 to avoid conflicting
-# with the health listener on $PORT.
-export OPENCLAW_GATEWAY_PORT=18789
 node openclaw.mjs gateway --bind lan --allow-unconfigured &
 GATEWAY_PID=$!
 
