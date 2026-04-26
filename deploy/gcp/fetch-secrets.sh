@@ -20,7 +20,6 @@ fetch() {
   cat <<'STATIC'
 OPENCLAW_STATE_DIR=/data/.openclaw
 OPENCLAW_WORKSPACE_DIR=/data/workspace
-MEMORY_REPO_DIR=/data/memory
 OPENCLAW_GATEWAY_PORT=18789
 OPENCLAW_GATEWAY_BIND=loopback
 DISCORD_SERVER_ID=1467439984096313354
@@ -28,12 +27,9 @@ DISCORD_USER_ID_1=905160890997940245
 DISCORD_USER_ID_2=522465064322727956
 MAIN_CHANNEL_ID=1497695325866037379
 DIGEST_CHANNEL_ID=1497695345927389204
-MEMORY_GIT_REPO=https://github.com/singhaniatanay/openclaw-memory.git
-MEMORY_SYNC_INTERVAL_SECONDS=300
 STATIC
   printf 'NVIDIA_API_KEY=%s\n'         "$(fetch nvidia-api-key)"
   printf 'DISCORD_BOT_TOKEN=%s\n'      "$(fetch discord-bot-token)"
-  printf 'MEMORY_GIT_PAT=%s\n'         "$(fetch memory-git-pat)"
   printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$(fetch openclaw-gateway-token)"
 } > "$ENV_FILE"
 

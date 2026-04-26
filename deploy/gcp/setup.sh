@@ -12,10 +12,8 @@ exec > >(tee -a "$LOG") 2>&1
 echo "===== openclaw setup $(date -u +%FT%TZ) ====="
 
 REPO_DIR=/opt/openclaw
-REPO_HOST=${REPO_HOST:-github.com}
-REPO_PATH=${REPO_PATH:-singhaniatanay/openclaw.git}
+REPO_URL=${REPO_URL:-https://github.com/singhaniatanay/openclaw.git}
 REPO_BRANCH=${REPO_BRANCH:-deploy/render-config}
-PROJECT=${PROJECT:-alwyn-openclaw}
 INSTALL_MARKER=/var/lib/openclaw/installed
 DATA_DIR=/data
 
@@ -52,19 +50,12 @@ if [ ! -f "$INSTALL_MARKER" ]; then
 fi
 
 # ---------- 2. Repo clone / update ----------
-DEPLOY_PAT="$(gcloud secrets versions access latest --secret=memory-git-pat --project="$PROJECT" 2>/dev/null)"
-if [ -z "$DEPLOY_PAT" ]; then
-  echo "FATAL: could not fetch memory-git-pat from Secret Manager" >&2
-  exit 1
-fi
-AUTH_URL="https://x-access-token:${DEPLOY_PAT}@${REPO_HOST}/${REPO_PATH}"
-
 if [ ! -d "$REPO_DIR/.git" ]; then
-  echo "[setup] cloning ${REPO_HOST}/${REPO_PATH}"
-  git clone --branch "$REPO_BRANCH" "$AUTH_URL" "$REPO_DIR"
+  echo "[setup] cloning $REPO_URL"
+  git clone --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
 else
   echo "[setup] updating repo"
-  git -C "$REPO_DIR" remote set-url origin "$AUTH_URL"
+  git -C "$REPO_DIR" remote set-url origin "$REPO_URL"
   git -C "$REPO_DIR" fetch --prune origin
   git -C "$REPO_DIR" checkout "$REPO_BRANCH"
   git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
@@ -87,7 +78,7 @@ EnvironmentFile=/run/caddy/.env
 EOF
 
 # ---------- 5. Install OpenClaw systemd unit ----------
-chmod +x "$REPO_DIR/deploy/gcp/fetch-secrets.sh" "$REPO_DIR/deploy/gcp/start.sh" "$REPO_DIR/deploy/memory-sync.sh"
+chmod +x "$REPO_DIR/deploy/gcp/fetch-secrets.sh" "$REPO_DIR/deploy/gcp/start.sh"
 install -m 0644 "$REPO_DIR/deploy/gcp/openclaw.service" /etc/systemd/system/openclaw.service
 
 # ---------- 6. Make sure secrets file exists before first start ----------
