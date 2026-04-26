@@ -20,6 +20,37 @@ const GATEWAY_PORT = Number.parseInt(
 );
 const GATEWAY_HOST = "127.0.0.1";
 
+// Hop-by-hop headers must not be forwarded across a proxy hop (RFC 7230 §6.1).
+// Render's edge speaks HTTP/2 to clients but Node receives HTTP/1.1 here; some
+// of these (e.g. transfer-encoding, connection) can confuse the upstream
+// HTTP/1.1 parser if blindly forwarded.
+const HOP_BY_HOP = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailers",
+  "transfer-encoding",
+  "upgrade",
+  "host",
+]);
+
+function sanitizeHeaders(headers, { keepUpgrade = false } = {}) {
+  const clean = {};
+  for (const [k, v] of Object.entries(headers)) {
+    const lk = k.toLowerCase();
+    if (HOP_BY_HOP.has(lk)) {
+      if (!keepUpgrade) continue;
+      // Preserve connection/upgrade headers for WebSocket handshake.
+      if (lk !== "connection" && lk !== "upgrade") continue;
+    }
+    clean[k] = v;
+  }
+  clean.host = `${GATEWAY_HOST}:${GATEWAY_PORT}`;
+  return clean;
+}
+
 function fastHealth(res) {
   res.statusCode = 200;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -52,13 +83,14 @@ const server = http.createServer((req, res) => {
       port: GATEWAY_PORT,
       method: req.method,
       path: req.url,
-      headers: req.headers,
+      headers: sanitizeHeaders(req.headers),
     },
     (upstreamRes) => {
       res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
       upstreamRes.pipe(res);
     },
   );
+  upstream.setTimeout(30_000, () => upstream.destroy(new Error("upstream_timeout")));
   upstream.on("error", (err) => {
     if (!res.headersSent) gatewayUnavailable(res, err);
     else res.destroy();
@@ -69,7 +101,7 @@ const server = http.createServer((req, res) => {
 server.on("upgrade", (req, clientSocket, head) => {
   const upstream = net.connect(GATEWAY_PORT, GATEWAY_HOST, () => {
     const reqLine = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
-    const headers = Object.entries(req.headers)
+    const headers = Object.entries(sanitizeHeaders(req.headers, { keepUpgrade: true }))
       .map(([k, v]) =>
         Array.isArray(v) ? v.map((vv) => `${k}: ${vv}`).join("\r\n") : `${k}: ${v}`,
       )
