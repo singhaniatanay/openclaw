@@ -95,7 +95,20 @@ const server = http.createServer((req, res) => {
     if (!res.headersSent) gatewayUnavailable(res, err);
     else res.destroy();
   });
-  req.pipe(upstream);
+  // Methods without a body: end the upstream request immediately. Otherwise
+  // node's HTTP/1.1 client falls back to Transfer-Encoding: chunked (since
+  // there's no Content-Length), and the gateway's parser blocks waiting for
+  // a chunked body that will never arrive.
+  const hasBody =
+    req.method !== "GET" &&
+    req.method !== "HEAD" &&
+    req.method !== "DELETE" &&
+    req.method !== "OPTIONS";
+  if (hasBody) {
+    req.pipe(upstream);
+  } else {
+    upstream.end();
+  }
 });
 
 server.on("upgrade", (req, clientSocket, head) => {
